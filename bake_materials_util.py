@@ -261,31 +261,34 @@ def set_image_alpha(image, alpha, copy_alpha=False, threshold=0.0):
 
 
 def modify_image_alpha(dir_path, imgs, threshold=0.0):
-    ct = len(imgs)
-    if ct >= 4:
-        if "Alpha" in imgs[3]:
-            if Path(dir_path).joinpath(f"{imgs[3]}.png").is_file():
-                alpha = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[3]}.png")))
-                diffuse = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[0]}.png")))
-                normal = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[1]}.png")))
-                roughness = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[2]}.png")))
-                set_image_alpha(diffuse, alpha, copy_alpha=False, threshold=threshold)
-                set_image_alpha(normal, alpha, copy_alpha=False, threshold=threshold)
-                set_image_alpha(roughness, alpha, copy_alpha=False, threshold=threshold)
-                diffuse.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[0]}.png")))
-                normal.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[1]}.png")))
-                roughness.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[2]}.png")))
-                bpy.data.images.remove(diffuse)
-                bpy.data.images.remove(normal)
-                bpy.data.images.remove(roughness)
-                if ct > 4:
-                    if "Root" in imgs[4]:
-                        if Path(dir_path).joinpath(f"{imgs[4]}.png").is_file():
-                            root = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[4]}.png")))
-                            set_image_alpha(root, alpha, copy_alpha=False, threshold=threshold)
-                            root.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[4]}.png")))
-                            bpy.data.images.remove(root)
-                bpy.data.images.remove(alpha)
+    try:
+        ct = len(imgs)
+        if ct >= 4:
+            if "Alpha" in imgs[3]:
+                if Path(dir_path).joinpath(f"{imgs[3]}.png").is_file():
+                    alpha = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[3]}.png")))
+                    diffuse = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[0]}.png")))
+                    normal = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[1]}.png")))
+                    roughness = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[2]}.png")))
+                    set_image_alpha(diffuse, alpha, copy_alpha=False, threshold=threshold)
+                    set_image_alpha(normal, alpha, copy_alpha=False, threshold=threshold)
+                    set_image_alpha(roughness, alpha, copy_alpha=False, threshold=threshold)
+                    diffuse.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[0]}.png")))
+                    normal.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[1]}.png")))
+                    roughness.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[2]}.png")))
+                    bpy.data.images.remove(diffuse)
+                    bpy.data.images.remove(normal)
+                    bpy.data.images.remove(roughness)
+                    if ct > 4:
+                        if "Root" in imgs[4]:
+                            if Path(dir_path).joinpath(f"{imgs[4]}.png").is_file():
+                                root = bpy.data.images.load(filepath=str(Path(dir_path).joinpath(f"{imgs[4]}.png")))
+                                set_image_alpha(root, alpha, copy_alpha=False, threshold=threshold)
+                                root.save_render(filepath=str(Path(dir_path).joinpath(f"{imgs[4]}.png")))
+                                bpy.data.images.remove(root)
+                    bpy.data.images.remove(alpha)
+    except:
+        pass
 
 
 def material_bake(self, context):
@@ -334,7 +337,7 @@ def hair_mesh_mat_bake(context):
                 img = bake_multi_material(ob, image_size, image_type, save_mode, destination, samples=samples, active_uv=active_uv)
                 imgs.append(img)
     ob["HF_BAKED"] = True
-    if scene.baker_props.use_alpha:
+    if scene.baker_props.use_alpha or context.preferences.addons[__package__].preferences.bake_alpha:
         modify_image_alpha(destination, imgs, threshold=scene.baker_props.threshold)
 
 
@@ -350,7 +353,7 @@ class BakeProps(PropertyGroup):
 
     use_denoise: BoolProperty(name="Use Denoise", description="Use denoise for image. Not recommended for procedural hair texture baking.", default=False)
 
-    use_alpha: BoolProperty(name="Use Aplha", description="Bake alpha into textures.", default=True)
+    use_alpha: BoolProperty(name="Use Aplha", description="Bake alpha into textures.", default=False)
 
     use_root: BoolProperty(name="Use Root", description="Bake root textures.", default=False)
 

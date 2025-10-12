@@ -556,20 +556,24 @@ class HAIRFACTORY_OT_disable_physics(Operator):
     
     def execute(self, context):
         ob = context.object
-        mob = ob['PHY_MESH']
-        arm = ob['PHY_BONES']
-        mn = mob.name
-        an = arm.name
-        for m in ob.modifiers:
-            if m.type == 'NODES':
-                if m.name.split(".")[0] == "PHYSICS_CONTROL":
-                    delete_geo_node_modifier(ob, m)
-        bpy.data.meshes.remove(mob.data)
-        bpy.data.armatures.remove(arm.data)
-        del ob['PHY_MESH']
-        del ob['PHY_BONES']
-        self.report({'INFO'}, f"{ob.name} Physics disabled and objects removed. MESH: {mn}  ARMATURE: {an}")
-        return {'FINISHED'}
+        try:
+            mob = ob['PHY_MESH']
+            arm = ob['PHY_BONES']
+            mn = mob.name
+            an = arm.name
+            for m in ob.modifiers:
+                if m.type == 'NODES':
+                    if m.name.split(".")[0] == "PHYSICS_CONTROL":
+                        delete_geo_node_modifier(ob, m)
+            bpy.data.meshes.remove(mob.data)
+            bpy.data.armatures.remove(arm.data)
+            del ob['PHY_MESH']
+            del ob['PHY_BONES']
+            self.report({'INFO'}, f"{ob.name} Physics disabled and objects removed. MESH: {mn}  ARMATURE: {an}")
+            return {'FINISHED'}
+        except Exception as e:
+            self.report({'ERROR'}, f"[Disable Physics Error] {e}.")
+            return{'CANCELLED'}
 
 
 class HAIRFACTORY_OT_launch_bake_destination(Operator):
@@ -626,28 +630,32 @@ class HAIRFACTORY_OT_convert_hair_to_mesh(Operator):
         add_arm = False
         modifiers = ob.modifiers
         groups = (getattr(m, 'node_group') for m in modifiers if m.type == 'NODES')
-        object_.convert(target='MESH', merge_customdata=True)
-        if 'PHY_BONES' in dict(ob).keys():
-            h_arm = add_hair_armature(ob, Name="Hair_Armature")
-            h_arm.object = ob['PHY_BONES']
-            h_arm.use_bone_envelopes = True
-            h_arm.use_deform_preserve_volume = True
-            h_arm.use_vertex_groups = False
-            add_arm = True
-        if 'PHY_MESH' in dict(ob).keys():
-            for m in ob['PHY_MESH'].modifiers:
-                if m.type == 'NODES':
-                    delete_geo_node_modifier(ob['PHY_MESH'], m)
-            bpy.data.meshes.remove(ob['PHY_MESH'].data)
-            del ob['PHY_MESH']
-        for ng in groups:
-            delete_full_node_tree(ng)
-        if len(context.object.material_slots) > 0:
-            context.object["HF_BAKED"] = False
-            hair_factory.bake_destination('INVOKE_DEFAULT')
-        msg = (f" Armature modifier added to {ob.name}" if add_arm else "")
-        self.report({'INFO'}, f"{ob.name} converted to mesh.{msg}")
-        return {'FINISHED'}
+        try:
+            object_.convert(target='MESH', merge_customdata=True)
+            if 'PHY_BONES' in dict(ob).keys():
+                h_arm = add_hair_armature(ob, Name="Hair_Armature")
+                h_arm.object = ob['PHY_BONES']
+                h_arm.use_bone_envelopes = True
+                h_arm.use_deform_preserve_volume = True
+                h_arm.use_vertex_groups = False
+                add_arm = True
+            if 'PHY_MESH' in dict(ob).keys():
+                for m in ob['PHY_MESH'].modifiers:
+                    if m.type == 'NODES':
+                        delete_geo_node_modifier(ob['PHY_MESH'], m)
+                bpy.data.meshes.remove(ob['PHY_MESH'].data)
+                del ob['PHY_MESH']
+            for ng in groups:
+                delete_full_node_tree(ng)
+            if len(context.object.material_slots) > 0:
+                context.object["HF_BAKED"] = False
+                hair_factory.bake_destination('INVOKE_DEFAULT')
+            msg = (f" Armature modifier added to {ob.name}" if add_arm else "")
+            self.report({'INFO'}, f"{ob.name} converted to mesh.{msg}")
+            return {'FINISHED'}
+        except Exception as e:
+            self.report({'ERROR'}, f"[Hair to Mesh Error] {e}.")
+            return{'CANCELLED'}
 
 
 class HAIRFACTORY_OT_bake_phys(Operator):
@@ -682,6 +690,7 @@ class HAIRFACTORY_OT_bake_phys(Operator):
         if "PHY_HAIR" in dict(ob).keys():
             ob = ob["PHY_HAIR"]
         arm = ob["PHY_BONES"]
+        pc = [getattr(m, 'node_group') for m in ob.modifiers if (m.type == 'NODES' and m.node_group.name.split(".")[0] == "PHYSICS_CONTROL")]
         object_.select_all(action='DESELECT')
         arm.select_set(1)
         context.view_layer.objects.active = arm
@@ -690,15 +699,30 @@ class HAIRFACTORY_OT_bake_phys(Operator):
         arm.hide_viewport = False
         arm.hide_select = False
         object_.mode_set(mode='POSE')
-        nla.bake(frame_start=scene.frame_start, frame_end=scene.frame_end, only_selected=arm.data.hf_selected_bones_only, clear_constraints=True, visual_keying=True, bake_types={'POSE'})
-        arm.animation_data.action.name = "Hair_Action"
-        object_.mode_set(mode='OBJECT')
-        object_.select_all(action='DESELECT')
-        ob.select_set(1)
-        context.view_layer.objects.active = ob
-        arm.hide_viewport = ahv
-        arm.hide_select = ahs
-        return{'FINISHED'}
+        try:
+            nla.bake(frame_start=scene.frame_start, frame_end=scene.frame_end, only_selected=arm.data.hf_selected_bones_only, clear_constraints=True, visual_keying=True, bake_types={'POSE'})
+            arm.animation_data.action.name = "Hair_Action"
+            object_.mode_set(mode='OBJECT')
+            object_.select_all(action='DESELECT')
+            ob.select_set(1)
+            context.view_layer.objects.active = ob
+            arm.hide_viewport = ahv
+            arm.hide_select = ahs
+            try:
+                for node_group in pc:
+                    delete_full_node_tree(node_group)
+            except:
+                pass
+            return{'FINISHED'}
+        except Exception as e:
+            object_.mode_set(mode='OBJECT')
+            object_.select_all(action='DESELECT')
+            ob.select_set(1)
+            context.view_layer.objects.active = ob
+            arm.hide_viewport = ahv
+            arm.hide_select = ahs
+            self.report({'ERROR'}, f"[Action Bake Error] {e}.")
+            return{'CANCELLED'}
 
 
 def bake_to_nla():

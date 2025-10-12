@@ -203,7 +203,10 @@ def delete_full_node_tree(node_tree):
             bpy.data.node_groups.remove(node_group)
         except:
             continue
-    bpy.data.node_groups.remove(node_tree)
+    try:
+        bpy.data.node_groups.remove(node_tree)
+    except:
+        pass
 
 
 def delete_geo_node_modifier(ob, modifier):
@@ -243,8 +246,9 @@ def update_obj_idx(self, context):
 def get_socket_name(modifier, socket):
     itree = modifier.node_group.interface.items_tree
     for i in itree:
-        if i.identifier == socket:
-            yield i.name
+        if hasattr(i, 'identifier'):
+            if i.identifier == socket:
+                yield i.name
 
 
 def mod_stack_gui(self, context):

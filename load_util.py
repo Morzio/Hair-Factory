@@ -452,12 +452,23 @@ def mat_load_items(self, context):
     return [("None", "None", "")] + list(mat_list)
 
 
+def get_modifier_socket_type_by_name(modifier, name):
+    if getattr(modifier, 'node_group', None):
+        ng = modifier.node_group
+        if getattr(ng, 'interface'):
+            itree = ng.interface.items_tree
+            if hasattr(itree[name], 'socket_type'):
+                return itree[name].socket_type
+    return
+
+
 def get_modifier_identifier_by_name(modifier, name):
     if getattr(modifier, 'node_group', None):
         ng = modifier.node_group
         if getattr(ng, 'interface'):
             itree = ng.interface.items_tree
-            return (itree[name].identifier if name in itree.keys() else None)
+            if name in itree.keys():
+                return itree[name].identifier
     return
 
 
@@ -474,8 +485,7 @@ def set_modifier_socket_by_name(modifier, name, data):
         try:
             modifier[socket] = data
         except:
-            return
-    return
+            pass
 
 
 def add_hair_factory_node(ob, dir_path, file):
@@ -484,7 +494,8 @@ def add_hair_factory_node(ob, dir_path, file):
         modifier = ob.modifiers.new(node_group.name, 'NODES')
         modifier.node_group = node_group
         if bpy.context.preferences.addons[__package__].preferences.set_surface_ob:
-            set_modifier_socket_by_name(modifier, "Surface", ob.parent)
+            if get_modifier_socket_type_by_name(modifier, "Surface") == 'NodeSocketObject':
+                set_modifier_socket_by_name(modifier, "Surface", ob.parent)
         return modifier
     except Exception as hfn_error:
         print(f"Error in loading {file} from {dir_path}: {hfn_error}")

@@ -130,6 +130,12 @@ class HAIRFACTORY_PT_AddonPreferences(AddonPreferences):
         description = "Choose to have the option to delete all presets from this panel.",
         default=False,
     )
+
+    bake_alpha: BoolProperty(
+        name="Automatic Bake Alpha",
+        description = "Automatically bake alpha texture if available.",
+        default=True,
+    )
     
     
     def draw(self, context):
@@ -142,6 +148,7 @@ class HAIRFACTORY_PT_AddonPreferences(AddonPreferences):
         opt_box = pref_box.box()
         ocol = opt_box.column()
         ocol.prop(self, 'set_surface_ob')
+        ocol.prop(self, 'bake_alpha')
         ocol.prop(self, 'delete_node_group')
         ocol.prop(self, 'apply_mod_delete')
         ocol.prop(self, 'delete_presets')
